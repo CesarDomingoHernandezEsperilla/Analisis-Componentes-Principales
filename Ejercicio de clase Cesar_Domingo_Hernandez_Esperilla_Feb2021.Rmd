@@ -1,0 +1,192 @@
+---
+title: "Minería y Modelizacion Predictiva2 _ Ejercicio clase"
+author: "Master en Big Data NTIC. César Domingo Hernández"
+date: "10/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+# Cargamos las librerías necesarias:
+library(readxl)
+library(knitr)
+library(pastecs)
+library(lattice)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(FactoMineR)
+```
+
+
+```{r}
+BARRIOS <- read_excel("C:/Users/cesar/OneDrive/Desktop/UCM BD&DS/07- Minería de datos y Modelización predictiva 2/Sesion1/BARRIOS.xlsx")
+
+datos <- as.data.frame(BARRIOS)
+rownames(datos)<-datos[,1]
+datos <- datos[,-1]
+```
+
+### Calcular los estadísticos básicos de todas las variables. Comparar sus medias y sus varianzas
+```{r}
+#Descriptivos
+Est <-stat.desc(datos,basic = FALSE)
+knitr::kable(Est, digits = 2, caption = "Estadísticos descriptivos")
+```
+## Representar el gráfico de dispersión en las variables NES, ANAL y de las variables ANAL, TM
+
+
+```{r}
+xyplot(ANAL~NES, data =datos)
+```
+
+Podemos ver una relacción lineal de tipo inverso, es decir, si en un barrio hay mayor porcentaje de nivel de estudios superiores entonces hay menor porcentaje de analfabetismo.
+
+```{r}
+xyplot(ANAL~TM, data =datos)
+```
+
+Aquí la relación es directa, a medida que aumenta el porcentaje de trabajadores manuales aumenta también el nivel de analfabetismo.
+
+## Calcular la matriz de correlaciones y su representación gráfica. ¿Cuáles son las variables más correlacionadas?¿Cómo es el sentido de esa correlación?
+
+```{r}
+R<-cor(datos,method="pearson")
+knitr::kable(R, digits =2, caption = "Correlaciones")
+```
+```{r}
+corrplot(R, type = "upper", order = "hclust", tl.col = "black", tl.srt = 90)
+
+```
+
+## Realizar un anális de componentes pricipales sobre la matriz de correlaciones, calculando 7 componentes. Estudiar los valores de los autovalores obtenidos y las gráficas que los resumen. ¿Cuál es el numero adecuado de componentes?
+
+```{r}
+fit <- PCA(datos, scale.unit=TRUE,ncp=7, graph=TRUE)
+
+eig<-get_eigenvalue(fit)
+knitr::kable(eig, digits = 2, caption = "Autovalores")
+```
+```{r}
+fviz_eig(fit,addlabels = TRUE)
+```
+
+## Hacer de nuevo el análisis sobre la matriz de correlaciones pero ahora indicando el número de componentes que hemos decidido retener. Sobre este análisis contestar los siguientes apartados.
+
+```{r}
+fit<-PCA(datos,scale.unit=TRUE, ncp=3, graph=TRUE)
+```
+
+a. ¿Cuál es la expresión para calcular la primera componente en función de las variables originales?
+
+```{r}
+knitr::kable(fit$svd$V, digits = 3,caption = "Autovectores")
+```
+
+b. Mostrar una tabla con las correlaciones de las Variables con las Componentes Principales. Para cada Componente indicar las variables con las que se está más correlacionada.
+
+```{r}
+# Guardamos los estadísticos asociados a las variables en el objeto var.
+var<- get_pca_var(fit)
+
+knitr::kable(var$cor, digits =2, caption = "Correlaciones de la CP con las variables")
+```
+
+c. Comentar lso gráficos que representan las variables en los planos formados por las componentes, intentando explicar lo que representa cada componente.
+```{r}
+ # Representación gráfica de las variables
+fviz_pca_var(fit, axes = c(1,2), col.var = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+```
+La componente 1 representa el número de trabajadores manuales (TM), el porcentaje de analfabetismo (ANAL), ocupados en la industria, nivel de estudios superiores en negativo y población menor a 14 años
+
+La componente 2 representa la variable Número de ocupados en servicios, Número de Ocupados y Población Total
+
+```{r}
+fviz_pca_var(fit, axes = c(1,3), col.var="cos2", gradients.col = c("#00AFBB", "#FC4E07"), repel = TRUE)
+```
+
+La Componente 3 rep`resenta a la población mayor de 65 años.
+```{r}
+fviz_pca_var(fit, axes =c(2,3), col.var="cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+```
+
+d. Mostrar la tabla y los gráficos que nos muestran la proporción de varianza de cada variable que es explicado por cada componente.  Cuál de las variables es la que está peor explicada?
+
+```{r}
+knitr::kable(var$cos2, digits =2,caption = "Cosenos al cuadrado")
+```
+```{r}
+# Representación gráfica de los cosenos
+corrplot(var$cos2,is.corr = FALSE)
+```
+
+```{r}
+# Porcentaje de la variabilidad explicada por las 3 CP
+fviz_cos2(fit,choice = "var",axes=1:3)
+```
+
+
+e. Mostrar la tabla y los gráficos que muestran el porcentaje de la varianza de cada Componente que es debido a cada variable. ¿ Qué variables contribuyen más a cada Componente?
+
+```{r}
+knitr::kable(var$contrib, digits = 2,caption = "Contribuciones")
+```
+```{r}
+corrplot(var$contrib, is.corr=FALSE)
+```
+
+
+f. Sobre los gráficos que representan las observacions en los nuevos ejes, y ayudándonos del biplot, teniendo en cuenta la posición de los barrios en el gráfico. Comentar las características socioeconómicas de algunos grupos de barrios.
+
+
+```{r}
+fviz_contrib(fit,choice = "var",axes=1,top=10)
+```
+
+```{r}
+fviz_contrib(fit,choice = "var",axes=2,top=10)
+```
+```{r}
+ fviz_contrib(fit,choice = "var",axes=3,top=10)
+```
+
+```{r}
+corrplot(var$contrib,is.corr = FALSE)
+```
+
+```{r}
+fviz_pca_ind(fit,axes = c(1,2),gradients.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+```
+```{r}
+# Representación conjunta de los individuos y las variables en los planos de las CP
+fviz_pca_biplot(fit, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969") # Individuals color
+```
+
+Vemos que Villaverde, Vallecas y Mediodia tienen un comportamiento similar. Tienen un valor alto de la CP1 lo que significa alto porcentaje de personas que trabajan en trabajos manuales y alto porcentaje de analfabetismo. Mientras que Chamberí y Salamanca también son similares pero en este caso tienen un alto porcentaje de población con nivel de estudios superiores y trabajadores en puestos directivos.
+
+Para ver el comportamiento de los barrios en la Componente 3 representamos los siguients gráficos:
+
+```{r}
+fviz_pca_ind(fit,axes = c(1,3), gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), repel = TRUE)
+```
+
+
+```{r}
+fviz_pca_biplot(fit,repel = TRUE,axes = c(1,3), col.var = "#2E9FDF",col.ind = "696969")
+```
+
+g) ¿Qué valor tiene Salamanca en la Componente2?. ¿Y Villaverde?. ¿Qué barrio tiene un valor más alto de la Componente 3?
+
+```{r}
+ind<-get_pca_ind(fit)
+knitr::kable(ind$coord, digits = 3,caption = "Valores de los individuos en las CP")
+```
+
